@@ -1,4 +1,4 @@
-# Embedded CoAP Server
+# Nodes Connection MQTT device
 
 Author: Agustin Bassi - 2020
 
@@ -7,16 +7,17 @@ Author: Agustin Bassi - 2020
 
 * [Intro](#intro)
 * [Install dependencies](#install-dependencies)
-* [Run CoAP server](#run-coap-server)
-* [Test CoAP server (optional)](#test-coap-server-(optional))
+* [Run Nodes Connection project](#run-nodes-connection-project)
+* [Run MQTT Client](#run-mqtt-client)
+* [Usage info](#usage-info)
 * [Want to help?](#want-to-help-?)
 * [License](#license)
 
 ## Intro
 
-This project consists in a embedded CoAP server based in Arduino framework using PlatformIO tool. 
+This project consists in a embedded MQTT Client that connects to [Nodes Connection](https://github.com/agustinBassi/nodes-connection) project, in order to visualize physical variables in a dashboard.
 
-The original board target is ESP32 but it can be easily modified to work with ESP8266 or similar, configuring the `platformio.ini` file in the root folder of the project.
+This project based in Arduino framework using PlatformIO tool. The original board target is ESP32 but it can be easily modified to work with ESP8266 or similar, configuring the `platformio.ini` file in the root folder of the project.
 
 ## Install dependencies
 
@@ -27,20 +28,35 @@ The project need the next dependencies:
 * Docker & Docker-Compose (optional to test CoAP server). In this links are the official installation steps for [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
 
 
-## Run CoAP server
+## Run Nodes Connection project
+
+As described above, this firmware works together with [Nodes Connection](https://github.com/agustinBassi/nodes-connection) project, so, to test it, this project must be running correctly. All the instructions to run it are in its README file.
+
+Once Nodes Connection is running correctly, proceed to run the `MQTT Device` client.
+
+## Run MQTT Client
 
 Begin by downloading this project with the command below.
 
 ```sh
-git clone https://github.com/agustinBassi/embedded-coap-server.git
-cd embedded-coap-server/
+git clone https://github.com/agustinBassi/nodes-connection-mqtt-device.git
+cd nodes-connection-mqtt-device/
 ```
 
-Configure WiFi settings accordingly modifying the lines 48-49 of file `src/main.cpp`.
+Configure WiFi settings accordingly modifying the lines 58-59 of file `src/main.cpp`.
 
 ```c
 const char* WIFI_SSID = "WIFI_SSID";
 const char* WIFI_PASS = "WIFI_PASS";
+```
+
+Configure `Nodes Connection MQTT Broker` settings accordingly modifying the lines 61-64 of file `src/main.cpp`.
+
+```c
+const String MQTT_SERVER         = "192.168.1.1";
+const int    MQTT_PORT           = 1883;
+const String MQTT_USER           = "";
+const String MQTT_PASS           = "";
 ```
 
 Compile the firmware, download it to the board and open the serial monitor, all in one, with the next command.
@@ -52,85 +68,35 @@ pio run -t upload && pio device monitor
 When program starts an output like this must be shown.
 
 ```sh
-Welcome to CoAP Server Device!
-WiFi connected - IP address: 192.168.0.46
-[Coap_InitServer] - Setup Callback Light
-[Coap_InitServer] - Setup Callback Button
-[Coap_InitServer] - Setup Response Callback
+Welcome to Nodes Connection MQTT device!
+
+Connecting to WIFI_SSID...
+WiFi connected
+IP address: 192.168.1.37
+Attempting MQTT connection...connected
+Subscribed to topic: device/config/esp32-001
+Sending MQTT Topic-Payload: device/up/esp32-001 -> up
+Sending MQTT Topic-Payload: device/status/esp32-001 -> {"temperature":"25","humidity":"50"}
 ```
 
-## Test CoAP server (optional)
+In the Nodes Connection dashboard, the values 25 & 50 should be shown in the widgets.
 
-To test the CoAP server any CoAP client can be used. In this case a Docker container with libcoap tool installed inside is proposed. Start by downloading the image with the next command.
+## Usage info
 
-```sh
-docker pull abassi/libcoap:latest
-```
+By pressing the ONBOARD_BUTTON, the device will change the values of Humidity and Temperature in random fashion. When it occurs, a message saying `Updating the sensor data values` should be shown in the serial terminal. The new values should be shown in the Nodes Connection widget as well.
 
-* Get the `.well-known/core` resource (available CoAP server resources) with the next command.
+To change the publish temperature & humidity values time, in the `Nodes Connection Dashboard` change the slider in the `Device Control` section. A message similar to `Publish time will change to 5000 ms` should be shown in the serial terminal.
 
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m get -p 5683 coap://IP_SERVER/.well-known/core
-```
+Each time the device publish a new status topic to the broker, the ONBOARD_LED will blink, in order to testify that a new topic were published.
 
-* Get the `light` resource state with the next command.
+The publish & subscribe function use `ArduinoJSON` library to parse JSON and create and serialize it. This library are extremly well documented and has a lot of examples and community support.
 
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m get -p 5683 coap://IP_SERVER/light
-```
-
-* Update `light` resource ON with next command.
-
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m put -e '{"light":true}' -p 5683 coap://IP_SERVER/light
-```
-
-* Update `light` resource OFF with next command.
-
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m put -e '{"light":true}' -p 5683 coap://IP_SERVER/light
-```
-
-* Get the `button` resource state with the next command.
-
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m get -p 5683 coap://IP_SERVER/button
-```
-
-* Test not found resource response with the next command.
-
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m get -p 5683 coap://IP_SERVER/not/found/resource
-```
-
-* Test some not allowed method resource response with the next command.
-
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m post -e '{"light":true}' -p 5683 coap://IP_SERVER/light
-```
-
-* Test bad request resource response with the next command.
-
-```sh
-docker run --rm --net=host -it abassi/libcoap \
-coap-client -m post -e '{"light":invalid_state}' -p 5683 coap://IP_SERVER/light
-```
-
-## 
 ## Want to help?
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 If you find it useful please helpme following my Github user and give to this project a Star. This will animate me to continue contribuiting with the great open source community.
 
-## 
 ## License
 
 This project is licensed under the GPLV3 License.
