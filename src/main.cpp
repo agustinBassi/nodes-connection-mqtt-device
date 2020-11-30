@@ -55,8 +55,8 @@ void App_Loop                (void);
 // Device indentification
 const String DEVICE_ID           = "esp32-001";
 // Wifi settings
-const char* WIFI_SSID            = "WIFI_SSID";
-const char* WIFI_PASS            = "WIFI_PASS";
+const String WIFI_SSID           = "WIFI_SSID";
+const String WIFI_PASS           = "WIFI_PASS";
 // Mqtt server settings
 const String MQTT_SERVER         = "192.168.1.1";
 const int    MQTT_PORT           = 1883;
