@@ -1,4 +1,4 @@
-# Nodes Connection MQTT device
+# AWS Connection MQTT device
 
 Author: Agustin Bassi - 2020
 
@@ -7,7 +7,7 @@ Author: Agustin Bassi - 2020
 
 * [Intro](#intro)
 * [Install dependencies](#install-dependencies)
-* [Run Nodes Connection project](#run-nodes-connection-project)
+* [Confiure AWS Platform](#configure-aws-platform)
 * [Run MQTT Client](#run-mqtt-client)
 * [Usage info](#usage-info)
 * [Want to help?](#want-to-help-?)
@@ -15,7 +15,7 @@ Author: Agustin Bassi - 2020
 
 ## Intro
 
-This project consists in a embedded MQTT Client that connects to [Nodes Connection](https://github.com/agustinBassi/nodes-connection) project, in order to visualize physical variables in a dashboard.
+This project consists in a embedded MQTT Client that connects to [AWS IoT Core](https://aws.amazon.com/iot-core/) platform, to send and receive MQTT topics from AWS suite.
 
 This project based in Arduino framework using PlatformIO tool. The original board target is ESP32 but it can be easily modified to work with ESP8266 or similar, configuring the `platformio.ini` file in the root folder of the project.
 
@@ -26,36 +26,30 @@ The project need the next dependencies:
 * [PlatformIO](https://platformio.org/): a full CLI tool to manage libraries, platforms, frameworks and projects for embedded systems. It handles all task needed in background with a easy to use command line interface. Even, it can be installed as an extension for many IDEs, for example Visual Studio Code.
 * [Visual Studio Code](https://code.visualstudio.com/) (optional but nice to hace): a popular IDE that can be used to program many languages. It has an extension for PlatformIO. So, if Visual Studio code is installed, the convenient way to install PlatformIO is by adding it as an extension instead of install them separately. 
 
-## Run Nodes Connection project
+## Configure AWS Platform
 
-As described above, this firmware works together with [Nodes Connection](https://github.com/agustinBassi/nodes-connection) project, so, to test it, this project must be running correctly. All the instructions to run it are in its README file.
+In order to connect to AWS IoT Core some steps must be done:
 
-Once Nodes Connection is running correctly, proceed to run the `MQTT Device` client.
+* Create account (can be Free Tier).
+* Register a Thing into AWS IoT Core.
+* Create a policy to enable Things to connect to AWS IoT Core, publish and subscribe to MQTT topics.
+* Associate the policy created with the Thing.
+* Deploy an application from AWS Serverless Application Repository to connect a physical device to the AWS cloud (optional).
+
+> **_NOTE:_**: All details to connect to AWS, create an account, register a Thing, configure a policy and instance an application from AWS SAR can be found in [helloiot.net](https://helloiot.net) site.
 
 ## Run MQTT Client
 
 Begin by downloading this project with the command below.
 
 ```sh
-git clone https://github.com/agustinBassi/nodes-connection-mqtt-device.git
-cd nodes-connection-mqtt-device/
+git clone https://github.com/agustinBassi/aws-connection-mqtt-device.git
+cd aws-connection-mqtt-device/
 ```
 
-Configure WiFi settings accordingly modifying the lines 58-59 of file `src/main.cpp`.
+Open the file `src/secrets.h` and configure accordingly settings for WiFi, AWS_IOT_ENDPOINT and thing certificates.
 
-```c
-const char* WIFI_SSID = "WIFI_SSID";
-const char* WIFI_PASS = "WIFI_PASS";
-```
-
-Configure `Nodes Connection MQTT Broker` settings accordingly modifying the lines 61-64 of file `src/main.cpp`.
-
-```c
-const String MQTT_SERVER         = "192.168.1.1";
-const int    MQTT_PORT           = 1883;
-const String MQTT_USER           = "";
-const String MQTT_PASS           = "";
-```
+> **_NOTE:_**: All information about get the required settings can be found at [helloiot.net](https://helloiot.net) site.
 
 Compile the firmware, download it to the board and open the serial monitor, all in one, with the next command.
 
@@ -66,28 +60,29 @@ pio run -t upload && pio device monitor
 When program starts an output like this must be shown.
 
 ```sh
-Welcome to Nodes Connection MQTT device!
-
+Welcome to AWS Connection MQTT device!
 Connecting to WIFI_SSID...
 WiFi connected
 IP address: 192.168.1.37
 Attempting MQTT connection...connected
-Subscribed to topic: device/config/esp32-001
-Sending MQTT Topic-Payload: device/up/esp32-001 -> up
-Sending MQTT Topic-Payload: device/status/esp32-001 -> {"temperature":"25","humidity":"50"}
+Subscribed to topic: esp32/sub
+Correctly connected to Broker!
+Sending MQTT Topic-Payload: esp32/pub -> {"time":8343,"sensor_a0":138}
+Sending MQTT Topic-Payload: esp32/pub -> {"time":1035,"sensor_a0":72}
 ```
-
-In the Nodes Connection dashboard, the values 25 & 50 should be shown in the widgets.
 
 ## Usage info
 
-By pressing the ONBOARD_BUTTON, the device will change the values of Humidity and Temperature in random fashion. When it occurs, a message saying `Updating the sensor data values` should be shown in the serial terminal. The new values should be shown in the Nodes Connection widget as well.
+Once device is connected correctly to `AWS IoT Core`, go to `Test` section, and subscribe to all topics (#), the message published by device should be shown in the messages section.
 
-To change the publish temperature & humidity values time, in the `Nodes Connection Dashboard` change the slider in the `Device Control` section. A message similar to `Publish time will change to 5000 ms` should be shown in the serial terminal.
+To test communication from `AWS IoT Core` to device, go to `Publish` section, and set a topic `esp32/sub` with value `{"message": "Hello from AWS IoT console"}`. That message should be shown in the serial terminal of device like the next output.
 
-Each time the device publish a new status topic to the broker, the ONBOARD_LED will blink, in order to testify that a new topic were published.
 
-The publish & subscribe function use `ArduinoJSON` library to parse JSON and create and serialize it. This library are extremly well documented and has a lot of examples and community support.
+```sh
+...
+[Mqtt_SubscribeCallback] esp32/sub -> {"message": "Hello from AWS IoT console"}
+...
+```
 
 ## Want to help?
 
